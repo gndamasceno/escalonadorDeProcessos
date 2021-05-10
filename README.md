@@ -1,2 +1,4 @@
 # escalonadorDeProcessos
 Suporte de execução implementando o modelo n x m de threads para uma linguagem concorrente baseada na criação de tarefas. Este suporte deve ser implementado na forma de uma biblioteca, utilizando C e a biblioteca de threads Pthreads.
+
+Neste modelo, n tarefas são executadas sobre m processadores virtuais (pvs). As tarefas são as atividades concorrentes criadas pelo programa (com a diretiva spawn). Os pvs são threads responsáveis por executar as tarefas geradas pelo programa. Os pvs compartilham, entre si, duas listas de tarefas: uma de tarefas prontas para executar e outra de tarefas finalizadas. As tarefas devem ser descritas, internamente, por uma estrutura de dados que possua, pelo menos, o ponteiro da função que executará o código da tarefa e dois ponteiros void* para áreas de memória contendo os parâmetros de entrada e o retorno da função.
