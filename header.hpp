@@ -21,3 +21,4 @@ int sync( int tId, void** res );
 
 
 void* exemploTarefa( void* p );
+void* MeuPV(void* dta);
