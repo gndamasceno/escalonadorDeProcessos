@@ -5,6 +5,7 @@
 #include <iostream>
 #include "header.hpp"
 #include <list>
+#include <deque>
 
 /*
 Bibliotecas que poderão ser úteis
@@ -18,66 +19,111 @@ struct Atrib: descreve atributos a serem considerados para escalonamento da tare
 struct Atrib {
   int p;
   int c;
-};
+}typedef Atrib;
 
 struct Trabalho {
    int tid;
-   void* (*f)(void*);
+   void* (*f)(void*); 
    void* numFib; // Parâmetro de entrada para f, no caso o número que é  fibonacci
    void* res; // Retorno de f
 }typedef Trabalho;
 
 //struct Trabalho *ListaTrabalhosProntos, *ListaTrabalhosTerminados;
 //Lista TrabalhoProntos e trabalhos terminados
-struct list<struct Trabalho *> listaTrabalhosProntos, listaTrabalhosTerminados;
-list<struct Trabalho *>::iterator iteratorList;
+struct deque<struct Trabalho *> listaTrabalhosProntos, listaTrabalhosTerminados;
+deque<struct Trabalho *>::iterator iteratorList;
 
 
 //Lista de PVs:
 static pthread_t *pvs;
-static int qtdPVs = 0;
+static int qtdPVs = 5;
 // Fim
 static bool Fim;
+pthread_mutex_t lock =  PTHREAD_MUTEX_INITIALIZER;
+void* exemploTarefa( void* p ){
+  int n1 = (int) p;
+  //pthread_mutex_lock(&lock)
+  cout << "Teste" ;
+  //cout << n1; 
+  //pthread_mutex_unlock(&lock);
+  return (int*) n1;
+}
 
 int main()
 {
-   
+    int t1;
+    struct Atrib a1;
+    a1.c = 0;
+    a1.p = 0;
+    int n1 = 10;
+    // struct Trabalho * teste;
+    // teste = (Trabalho *) malloc(sizeof(Trabalho));
+    // teste->res = NULL;
+    // teste->tid = 1;
+    // teste->numFib = (void*) 10;
+    // teste->f = exemploTarefa;
+    /*
     cout << "Quantidade de processadores virtuais: " << endl;
     cin >> qtdPVs;
     cin.ignore();
+    */
+    t1 = spawn( &a1, exemploTarefa, (void*) n1 );
+    t1 = spawn( &a1, exemploTarefa, (void*) n1 );
+    t1 = spawn( &a1, exemploTarefa, (void*) n1 );
+    t1 = spawn( &a1, exemploTarefa, (void*) n1 );
     if(!start(qtdPVs)){
       cout << "Criação de Processadores virtuais falhou" << endl;
       exit(EXIT_FAILURE);
     }
 
-
+  cout << "teste";
     finish();
 }
 
 void* MeuPV(void* dta) {
-
+  /*
  void* res;
+ res = NULL;
+ int n;
  Trabalho *t;
+ pthread_t tread_aux;
  //Coisas que esse while faz: 
  //1° - Ele "consome" uma chamada de função da lista de Trabalhos prontos para serem processados
  //2° - Ele "sincroniza" o resultado de uma chamada de função ???
  //3° - Ele armazena o resultado adquirido na sincronização na lista de trabalhos terminados 
- while(Fim == false && !(listaTrabalhosProntos.empty()) ) {
-/*
-  t = pegaUmTrabalho(); --->> Aqui o PV tem comportamento de consumidor
-  res = t->f( Trabalho->dta );   --->> vai para AAA
-  ArmazenaResultados(t,res); --->> Coloca na Lista de Terminados
-*/
+  int i = 0;
+// for(iteratorList = listaTrabalhosProntos.begin(); iteratorList != listaTrabalhosProntos.end(); iteratorList++){
+   
+// }
+cout << listaTrabalhosProntos.size();
+ 
+ while(Fim == false && !(listaTrabalhosProntos.empty())) {
+  t = listaTrabalhosProntos.front(); //--->> Aqui o PV tem comportamento de consumidor
+   pthread_mutex_lock(&lock);
+  res = t->f(t->numFib);
+  n = (int) res;
+  cout << "resultado" << n;
+  t->res = res;
+  listaTrabalhosTerminados.push_front(t);
+  listaTrabalhosProntos.pop_front();
+  pthread_mutex_unlock(&lock);
+
+  
+    // res = t->f( Trabalho->dta );   --->> vai para AAA
+    // ArmazenaResultados(t,res); --->> Coloca na Lista de Terminados
+  
  }
+ 
   return NULL;
+  */
 }
 
 // eu crio os pv executando a função MeuPV, como o fim é false ele vai ficar rodando até ter algum trabalho na lista, qndo tiver um trabalho, ele deveria executar o trabalho. Como eu faria pra ele executar o fibonacci?
-int start( int m ) {
+int start( int qtdpvs ) {
  int thread_status;
- pvs =(pthread_t *) malloc(m*sizeof(pthread_t));
+ pvs =(pthread_t *) malloc(qtdpvs*sizeof(pthread_t));
  Fim = false;
- for( int i = 0 ; i < m ; i++ ){
+ for( int i = 0 ; i < qtdpvs ; i++ ){
    thread_status = pthread_create(&(pvs[i]),NULL, MeuPV , NULL);
    if(thread_status != 0)
     {
@@ -118,6 +164,7 @@ int spawn( struct Atrib* atrib, void *(*t) (void *), void* dta ){
   trab->tid = 2;        //Como definir o id???
   trab->f = t;
   trab->numFib = dta;
+  trab->res = NULL;
   listaTrabalhosProntos.push_front(trab);
 }
 
@@ -130,18 +177,21 @@ int spawn( struct Atrib* atrib, void *(*t) (void *), void* dta ){
 // Essa Função verifica se o resultado da função já foi calculado
 // Se foi, Ele pega um Trabalho da função listaTrabalhosTerminados pelo ID e devolve o resultado
 // Como pegar um elemento da lista pra comparar com o tId passado no sync
-// Unico jeito que pensei de resolver isso seria fazer uma pesquisa circular, mas é muito custoso
-// Acho que o jeito é criar uma lista do zero mesmo
 int sync( int tId, void** res ){
-      void *resp;
-      Trabalho *aux;
+    void *resp;
+    Trabalho *aux;
     for(iteratorList = listaTrabalhosTerminados.begin(); iteratorList != listaTrabalhosTerminados.end(); iteratorList++){
         aux = listaTrabalhosTerminados.front();
-        if(aux->tid == tId){
-          resp = aux->res;
-          listaTrabalhosTerminados.remove(aux);
+        if(aux->res != NULL){
+          if(aux->tid == tId){
+            resp = aux->res; // Em teoria sucesso 
+            
+            listaTrabalhosTerminados.push_front(aux);
+            return 1;
+          }
         }
     }
+    return 0;
 }
 
 
@@ -151,14 +201,14 @@ possivel ordem de execução do programa
       - createPtreads(3)
       -               - MeuPV - id 1(fica rodando esperando algo aparecer)
       -               - spawn(fibo 2)
-      -               -               - Coloca na lista de trabalhos prontos (fibo 2)
+      -               -               - Coloca na lista de trabalhos prontos (fibo 4)
       -               - MeuPV-1
       -               -               - MeuPV-1 executa fibo 2
       -               -               -                       - MeuPV-1 chama Spawn (fibo 1)
       -               -               -                       -                      - TrabalhosProntos(fibo1)
       -               -               -                       -                      - MeuPV-2 Executa Fibo 1
       -               -               -                       -                      - TrabalhoTerminado(fibo1)
-      -               -               -                       - MeuPV-1 chama Spawn (fibo 0) retorna 1
+      -               -               -                       - MeuPV-1 chama Spawn (fibo 0)
       -               -               -                       -                      - TrabalhoProntos(fibo0)
       -               -               -                       -                      - MeuPV-3 Executa Fibo 0
       -               -               -                       -                      - TrabalhoTerminado(fibo0)
@@ -179,3 +229,5 @@ COMO MONTAR OS IDS
 OQ ACONTECE SE O NÚMERO DE PVS FOR MENOR QUE O NÚMERO DE CHAMADAS DE SPAWNS? (VAI SER NA MAIORIA DOS CASOS, CAUSANDO DEADLOCK)
 
 */
+
+
