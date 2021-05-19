@@ -25,7 +25,7 @@ struct Trabalho {
    int tid;
    void* (*f)(void*); 
    void* numFib; // Parâmetro de entrada para f, no caso o número que é  fibonacci
-   void* res; // Retorno de f
+   int res; // Retorno de f
 }typedef Trabalho;
 
 //struct Trabalho *ListaTrabalhosProntos, *ListaTrabalhosTerminados;
@@ -40,13 +40,10 @@ static int qtdPVs = 5;
 // Fim
 static bool Fim;
 pthread_mutex_t lock =  PTHREAD_MUTEX_INITIALIZER;
+int *i = (int*) malloc (sizeof(int));
 void* exemploTarefa( void* p ){
-  int n1 = (int) p;
-  //pthread_mutex_lock(&lock)
-  cout << "Teste" ;
-  //cout << n1; 
-  //pthread_mutex_unlock(&lock);
-  return (int*) n1;
+  (*i)++;
+  return i;
 }
 
 int main()
@@ -67,55 +64,54 @@ int main()
     cin >> qtdPVs;
     cin.ignore();
     */
-    t1 = spawn( &a1, exemploTarefa, (void*) n1 );
-    t1 = spawn( &a1, exemploTarefa, (void*) n1 );
-    t1 = spawn( &a1, exemploTarefa, (void*) n1 );
-    t1 = spawn( &a1, exemploTarefa, (void*) n1 );
+    t1 = spawn( &a1, exemploTarefa, NULL );
+    t1 = spawn( &a1, exemploTarefa, NULL );
+    t1 = spawn( &a1, exemploTarefa, NULL );
+    t1 = spawn( &a1, exemploTarefa, NULL );
+    t1 = spawn( &a1, exemploTarefa, NULL );
     if(!start(qtdPVs)){
       cout << "Criação de Processadores virtuais falhou" << endl;
       exit(EXIT_FAILURE);
     }
 
-  cout << "teste";
+    //cout << "fim";
     finish();
+    cout << "fim" << endl;
 }
 
 void* MeuPV(void* dta) {
-  /*
- void* res;
- res = NULL;
- int n;
+ int *n;
+ void *result;
+ int x = 1;
  Trabalho *t;
  pthread_t tread_aux;
- //Coisas que esse while faz: 
- //1° - Ele "consome" uma chamada de função da lista de Trabalhos prontos para serem processados
- //2° - Ele "sincroniza" o resultado de uma chamada de função ???
- //3° - Ele armazena o resultado adquirido na sincronização na lista de trabalhos terminados 
-  int i = 0;
-// for(iteratorList = listaTrabalhosProntos.begin(); iteratorList != listaTrabalhosProntos.end(); iteratorList++){
-   
-// }
-cout << listaTrabalhosProntos.size();
  
- while(Fim == false && !(listaTrabalhosProntos.empty())) {
+pthread_mutex_lock(&lock);
+while (!listaTrabalhosProntos.empty()){
+  t = listaTrabalhosProntos.front();
+  result = (int*) t->f((void*) &x);
+  n = (int*) result;
+  t->res = *n;
+  cout << t->res << endl;
+  listaTrabalhosTerminados.push_front(t);
+  listaTrabalhosProntos.erase(listaTrabalhosProntos.begin());
+}
+pthread_mutex_unlock(&lock);
+ 
+ /*while(Fim == false && !(listaTrabalhosProntos.empty())) {
   t = listaTrabalhosProntos.front(); //--->> Aqui o PV tem comportamento de consumidor
-   pthread_mutex_lock(&lock);
   res = t->f(t->numFib);
   n = (int) res;
   cout << "resultado" << n;
   t->res = res;
   listaTrabalhosTerminados.push_front(t);
   listaTrabalhosProntos.pop_front();
-  pthread_mutex_unlock(&lock);
-
-  
     // res = t->f( Trabalho->dta );   --->> vai para AAA
     // ArmazenaResultados(t,res); --->> Coloca na Lista de Terminados
-  
- }
+ }*/
  
   return NULL;
-  */
+
 }
 
 // eu crio os pv executando a função MeuPV, como o fim é false ele vai ficar rodando até ter algum trabalho na lista, qndo tiver um trabalho, ele deveria executar o trabalho. Como eu faria pra ele executar o fibonacci?
@@ -164,8 +160,9 @@ int spawn( struct Atrib* atrib, void *(*t) (void *), void* dta ){
   trab->tid = 2;        //Como definir o id???
   trab->f = t;
   trab->numFib = dta;
-  trab->res = NULL;
+  trab->res = 0;
   listaTrabalhosProntos.push_front(trab);
+  return 0;
 }
 
 //// struct Trabalho {
@@ -178,11 +175,11 @@ int spawn( struct Atrib* atrib, void *(*t) (void *), void* dta ){
 // Se foi, Ele pega um Trabalho da função listaTrabalhosTerminados pelo ID e devolve o resultado
 // Como pegar um elemento da lista pra comparar com o tId passado no sync
 int sync( int tId, void** res ){
-    void *resp;
+    int resp;
     Trabalho *aux;
     for(iteratorList = listaTrabalhosTerminados.begin(); iteratorList != listaTrabalhosTerminados.end(); iteratorList++){
         aux = listaTrabalhosTerminados.front();
-        if(aux->res != NULL){
+        if(aux->res != 0){
           if(aux->tid == tId){
             resp = aux->res; // Em teoria sucesso 
             
