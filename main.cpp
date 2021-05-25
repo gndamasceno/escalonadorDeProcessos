@@ -36,14 +36,23 @@ deque<struct Trabalho *>::iterator iteratorList;
 
 //Lista de PVs:
 static pthread_t *pvs;
-static int qtdPVs = 5;
+static int qtdPVs = 10;
 // Fim
 static bool Fim;
 pthread_mutex_t lock =  PTHREAD_MUTEX_INITIALIZER;
 int *i = (int*) malloc (sizeof(int));
 void* exemploTarefa( void* p ){
+  int *teste = (int *)p;
   (*i)++;
-  return i;
+  return teste;
+}
+void printIdLista(deque<struct Trabalho *> x){
+    cout << "lista ID: ";
+    for (int i = 0; i < x.size(); i++){
+      cout << x.at(i)->tid << " ";
+      
+    }
+    cout << endl;
 }
 
 int main()
@@ -64,21 +73,35 @@ int main()
     cin >> qtdPVs;
     cin.ignore();
     */
+
+    
+
     t1 = spawn( &a1, exemploTarefa, NULL );
     t1 = spawn( &a1, exemploTarefa, NULL );
     t1 = spawn( &a1, exemploTarefa, NULL );
     t1 = spawn( &a1, exemploTarefa, NULL );
     t1 = spawn( &a1, exemploTarefa, NULL );
+
+    int aux = 2;
+    //printIdLista(listaTrabalhosProntos);
+     sync(2, aux);
+    //printIdLista(listaTrabalhosProntos);
+
+    printIdLista(listaTrabalhosTerminados);
     if(!start(qtdPVs)){
       cout << "Criação de Processadores virtuais falhou" << endl;
       exit(EXIT_FAILURE);
     }
+    printIdLista(listaTrabalhosTerminados);
+    
 
-    //cout << "fim";
     finish();
     cout << "fim" << endl;
 }
 
+void armazenaResultados (Trabalho *t){
+  listaTrabalhosTerminados.push_front(t);
+}
 void* MeuPV(void* dta) {
  int *n;
  void *result;
@@ -86,30 +109,21 @@ void* MeuPV(void* dta) {
  Trabalho *t;
  pthread_t tread_aux;
  
-pthread_mutex_lock(&lock);
-while (!listaTrabalhosProntos.empty()){
-  t = listaTrabalhosProntos.front();
-  result = (int*) t->f((void*) &x);
-  n = (int*) result;
-  t->res = *n;
-  cout << t->res << endl;
-  listaTrabalhosTerminados.push_front(t);
-  listaTrabalhosProntos.erase(listaTrabalhosProntos.begin());
+ pthread_mutex_lock(&lock);
+ while (!listaTrabalhosProntos.empty()){
+   t = listaTrabalhosProntos.front();
+   result = (int*) t->f((void*) &x);
+   n = (int*) result;
+   t->res = *n;
+   cout << t->res << endl;
+  
+   armazenaResultados(t);
+   listaTrabalhosProntos.erase(listaTrabalhosProntos.begin());
+   //printIdLista(listaTrabalhosProntos);
 }
-pthread_mutex_unlock(&lock);
- 
- /*while(Fim == false && !(listaTrabalhosProntos.empty())) {
-  t = listaTrabalhosProntos.front(); //--->> Aqui o PV tem comportamento de consumidor
-  res = t->f(t->numFib);
-  n = (int) res;
-  cout << "resultado" << n;
-  t->res = res;
-  listaTrabalhosTerminados.push_front(t);
-  listaTrabalhosProntos.pop_front();
-    // res = t->f( Trabalho->dta );   --->> vai para AAA
-    // ArmazenaResultados(t,res); --->> Coloca na Lista de Terminados
- }*/
- 
+  
+  pthread_mutex_unlock(&lock); 
+  
   return NULL;
 
 }
@@ -154,10 +168,14 @@ void finish() {
 // Essa função é responsável por colocar a função na lista de trabalhos prontos. ??? 
 // eu tentei pegar os atributos da função Spawn e colocar numa variavel do tipo Trabalho, depois colocar essa variavel na listaTrabalhosProntos.
 // Como funcionaria a sincronização??? 
+
+int idTarefa = -1;
+
 int spawn( struct Atrib* atrib, void *(*t) (void *), void* dta ){
+  idTarefa++;
   struct Trabalho *trab;
   trab = (Trabalho *) malloc(sizeof(Trabalho));
-  trab->tid = 2;        //Como definir o id???
+  trab->tid = idTarefa;        //Como definir o id???
   trab->f = t;
   trab->numFib = dta;
   trab->res = 0;
@@ -174,20 +192,44 @@ int spawn( struct Atrib* atrib, void *(*t) (void *), void* dta ){
 // Essa Função verifica se o resultado da função já foi calculado
 // Se foi, Ele pega um Trabalho da função listaTrabalhosTerminados pelo ID e devolve o resultado
 // Como pegar um elemento da lista pra comparar com o tId passado no sync
-int sync( int tId, void** res ){
+int sync( int tId, int res ){
+    bool tarefaEstaEmListaTrabalhosProntos = false;
+    bool tarefaEstaEmListaTrabalhosTerminados = false;
     int resp;
-    Trabalho *aux;
-    for(iteratorList = listaTrabalhosTerminados.begin(); iteratorList != listaTrabalhosTerminados.end(); iteratorList++){
-        aux = listaTrabalhosTerminados.front();
-        if(aux->res != 0){
-          if(aux->tid == tId){
-            resp = aux->res; // Em teoria sucesso 
-            
-            listaTrabalhosTerminados.push_front(aux);
-            return 1;
+    int x = 1;
+    int *n;
+    void *result;
+    Trabalho *aux, *trabalhoPronto;
+      for(int i = 0; i < listaTrabalhosProntos.size(); i++){ //caso 1
+        if(tId == listaTrabalhosProntos.at(i)->tid){ //tarefa na lista de prontas
+          pthread_mutex_lock(&lock);
+          tarefaEstaEmListaTrabalhosProntos = true;
+          trabalhoPronto = listaTrabalhosProntos.at(i);
+          result = (int*) trabalhoPronto->f((void*) &res);
+          n = (int*) result;
+          trabalhoPronto->res = *n;
+          cout << trabalhoPronto->res;
+          cout << " (sync) " << endl;
+          listaTrabalhosProntos.erase(listaTrabalhosProntos.begin()+i);   
+          pthread_mutex_unlock(&lock);  
+          return 1;  
+        }
+      }
+      if (!tarefaEstaEmListaTrabalhosProntos){//caso 2: verifica se está em listaTrabalhosTerminados e a retira 
+        for (int i = 0; i < listaTrabalhosTerminados.size(); i++){
+          if(tId == listaTrabalhosTerminados.at(i)->tid){
+            tarefaEstaEmListaTrabalhosTerminados = true;
+            listaTrabalhosTerminados.erase(listaTrabalhosTerminados.begin()+i);
           }
         }
-    }
+        return 1;
+      } 
+      else if (!tarefaEstaEmListaTrabalhosTerminados && !tarefaEstaEmListaTrabalhosProntos){//caso 3: tarefa esta sendo executada, esperar um pouco;
+          //sleep(10);
+          return 2;
+      }
+      
+    cout << "chamada de tarefa incorreta!" << endl;
     return 0;
 }
 
