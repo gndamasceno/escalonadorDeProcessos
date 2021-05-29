@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <malloc.h>
 #include <iostream>
+#include <unistd.h>
 #include "header.hpp"
 #include <list>
 #include <deque>
@@ -24,7 +25,7 @@ struct Atrib {
 struct Trabalho {
    int tid;
    void* (*f)(void*); 
-   void* numFib; // Parâmetro de entrada para f, no caso o número que é  fibonacci
+   int numFib; // Parâmetro de entrada para f, no caso o número que é  fibonacci
    int res; // Retorno de f
 }typedef Trabalho;
 
@@ -36,18 +37,13 @@ deque<struct Trabalho *>::iterator iteratorList;
 
 //Lista de PVs:
 static pthread_t *pvs;
-static int qtdPVs = 10;
+static int qtdPVs = 50;
 // Fim
-static bool Fim;
-pthread_mutex_t lock =  PTHREAD_MUTEX_INITIALIZER;
-int *i = (int*) malloc (sizeof(int));
-void* exemploTarefa( void* p ){
-  int *teste = (int *)p;
-  (*i)++;
-  return teste;
-}
+static bool Fim = false;
+pthread_mutex_t lock, lock2, lock3 =  PTHREAD_MUTEX_INITIALIZER;
+//nt *i = (int*) malloc (sizeof(int));
+
 void printIdLista(deque<struct Trabalho *> x){
-    cout << "lista ID: ";
     for (int i = 0; i < x.size(); i++){
       cout << x.at(i)->tid << " ";
       
@@ -55,48 +51,107 @@ void printIdLista(deque<struct Trabalho *> x){
     cout << endl;
 }
 
+int contador = 0;
+void* fibo( void* dta ) {
+  int  *n = (int*)dta;
+  cout << *n;
+  int *n1, *n2,
+      *r = (int *) malloc(sizeof(int)),
+      *r1, *r2;
+  struct Atrib a1, a2;
+
+  if( *n <= 2 ) *r = 1;
+  else {
+    contador++;
+    n1 = (int *) malloc(sizeof(int));
+    *n1 = *n - 1;
+    a1.p = 0; a1.c = *n1;
+    spawn( &a1, fibo, (void*) n1 );
+    n2 = (int *) malloc(sizeof(int));
+    *n2 = *n - 2;
+    a2.p = 0; a1.c = *n2;
+    spawn( &a2, fibo, (void*) n2 );
+    
+    
+    sync(contador, &r1);
+    contador++;
+    sync(contador, &r2);
+    *r = *r1 + *r2;
+
+    free(r1);    
+    free(r2);
+    free(n1);    
+    free(n2);
+  }
+  return r;
+}
+
+void* exemploTarefa( void* p ){
+  struct Atrib a2;
+    a2.c = 0;
+    a2.p = 0;
+
+
+  int *n = (int*)p;
+  int *n1, *n2, *r = (int *) malloc (sizeof (int)), *r1, *r2;
+  if(contador >= 2) {
+      cout << "exemploTarefa chamada, mas não foi feito spawn" << endl;
+      *r = 1000;
+  }
+  else{
+    cout << "exemploTarefa  chamada, fazendo mais spawn..." << endl;
+    contador++;
+    n1 = (int *) malloc (sizeof (int));
+    *n1 = *n;
+    n2 = (int *) malloc (sizeof (int));
+    *n2 = *n;
+    //cout << *n1 << " teste" << endl;
+    
+    spawn(&a2, exemploTarefa, (void*) n1);
+    //spawn(&a2, exemploTarefa, (void*) n2);
+    
+ 
+    sync(contador, &r1);
+    *r2 = *r1 + 1000;
+    //sync(2, &r2);
+
+    *r = *r1 + *r2; 
+    //cout << "r1 tem valor de: " << *r1 << endl;
+   
+  
+  }
+  cout << "Resultado: " << *r << endl;
+  return r;
+}
+
 int main()
 {
-    int t1;
+    int t1, *r, opa;
     struct Atrib a1;
     a1.c = 0;
     a1.p = 0;
-    int n1 = 10;
-    // struct Trabalho * teste;
-    // teste = (Trabalho *) malloc(sizeof(Trabalho));
-    // teste->res = NULL;
-    // teste->tid = 1;
-    // teste->numFib = (void*) 10;
-    // teste->f = exemploTarefa;
-    /*
-    cout << "Quantidade de processadores virtuais: " << endl;
-    cin >> qtdPVs;
-    cin.ignore();
-    */
+    int numeroFibonacci = 8;
 
+ 
+    /*t1 = spawn( &a1, exemploTarefa, NULL);
+    t1 = spawn( &a1, exemploTarefa, NULL);
+    t1 = spawn( &a1, exemploTarefa, NULL);*/
+    t1 = spawn( &a1, fibo, &numeroFibonacci);
     
-
-    t1 = spawn( &a1, exemploTarefa, NULL );
-    t1 = spawn( &a1, exemploTarefa, NULL );
-    t1 = spawn( &a1, exemploTarefa, NULL );
-    t1 = spawn( &a1, exemploTarefa, NULL );
-    t1 = spawn( &a1, exemploTarefa, NULL );
-
-    int aux = 2;
-    //printIdLista(listaTrabalhosProntos);
-     sync(2, aux);
-    //printIdLista(listaTrabalhosProntos);
-
-    printIdLista(listaTrabalhosTerminados);
+   
     if(!start(qtdPVs)){
       cout << "Criação de Processadores virtuais falhou" << endl;
       exit(EXIT_FAILURE);
     }
-    printIdLista(listaTrabalhosTerminados);
+    opa = sync (0, &r);
     
-
+    //printIdLista(listaTrabalhosTerminados);
     finish();
-    cout << "fim" << endl;
+    cout << opa;
+    /*printIdLista(listaTrabalhosTerminados);
+    sync(0, 100);*/
+
+  
 }
 
 void armazenaResultados (Trabalho *t){
@@ -105,21 +160,24 @@ void armazenaResultados (Trabalho *t){
 void* MeuPV(void* dta) {
  int *n;
  void *result;
- int x = 1;
+ int x = 2;
  Trabalho *t;
  pthread_t tread_aux;
+
  
  pthread_mutex_lock(&lock);
- while (!listaTrabalhosProntos.empty()){
+ while (Fim == false && !listaTrabalhosProntos.empty()){
    t = listaTrabalhosProntos.front();
-   result = (int*) t->f((void*) &x);
+    cout << "MeuPv Executando tarefa " << t->tid << "..." <<endl;
+   listaTrabalhosProntos.pop_front();
+
+   result = (int*) t->f((void*) &(t->numFib));
    n = (int*) result;
    t->res = *n;
-   cout << t->res << endl;
-  
-   armazenaResultados(t);
-   listaTrabalhosProntos.erase(listaTrabalhosProntos.begin());
-   //printIdLista(listaTrabalhosProntos);
+
+   listaTrabalhosTerminados.push_front(t);
+   cout << "MeuPv terminou a execução da tarefa " << t->tid << "! Printando tarefas terminadas: ";
+   printIdLista(listaTrabalhosTerminados);
 }
   
   pthread_mutex_unlock(&lock); 
@@ -159,77 +217,85 @@ void finish() {
   free(pvs);
 }
 
-// struct TrabalhoPronto {
-//    int tid;
-//    void* (*f)(void*);
-//    void* numFib; // Parâmetro de entrada para f, no caso o número que é  fibonacci
-//    void* res; // Retorno de f
-// };
-// Essa função é responsável por colocar a função na lista de trabalhos prontos. ??? 
-// eu tentei pegar os atributos da função Spawn e colocar numa variavel do tipo Trabalho, depois colocar essa variavel na listaTrabalhosProntos.
-// Como funcionaria a sincronização??? 
-
 int idTarefa = -1;
 
 int spawn( struct Atrib* atrib, void *(*t) (void *), void* dta ){
+  int *x = (int*) dta;
   idTarefa++;
+  cout << "Armazenando tarefa " << idTarefa << " na lista de Trabalhos Prontos..." << endl;
   struct Trabalho *trab;
   trab = (Trabalho *) malloc(sizeof(Trabalho));
-  trab->tid = idTarefa;        //Como definir o id???
+  trab->tid = idTarefa;        
   trab->f = t;
-  trab->numFib = dta;
+  trab->numFib = *x;
   trab->res = 0;
   listaTrabalhosProntos.push_front(trab);
+  cout << "Lista de Trabalhos Prontos: ";
+  printIdLista(listaTrabalhosProntos);
   return 0;
 }
 
-//// struct Trabalho {
-//    int tid;
-//    void* (*f)(void*);
-//    void* numFib; // Parâmetro de entrada para f, no caso o número que é  fibonacci
-//    void* res; // Retorno de f
-// };
-// Essa Função verifica se o resultado da função já foi calculado
-// Se foi, Ele pega um Trabalho da função listaTrabalhosTerminados pelo ID e devolve o resultado
-// Como pegar um elemento da lista pra comparar com o tId passado no sync
-int sync( int tId, int res ){
+int wait;
+
+int sync( int tId, int **res ){
+    //pthread_mutex_lock(&lock2); 
+    cout << "sync foi chamado para executar a tarefa " << tId <<"..." << endl;
     bool tarefaEstaEmListaTrabalhosProntos = false;
     bool tarefaEstaEmListaTrabalhosTerminados = false;
-    int resp;
+    int resp, ResultadoTarefa;
     int x = 1;
     int *n;
     void *result;
     Trabalho *aux, *trabalhoPronto;
-      for(int i = 0; i < listaTrabalhosProntos.size(); i++){ //caso 1
+      //pthread_mutex_lock(&lock);  
+      cout << "sync percorrendo lista de prontos..." << endl;
+      for(int i = 0; i < listaTrabalhosProntos.size(); i++){ //caso 1   
         if(tId == listaTrabalhosProntos.at(i)->tid){ //tarefa na lista de prontas
-          pthread_mutex_lock(&lock);
+          cout << "tarefa " << tId << " está na lista de prontos! Executando..." << endl;
           tarefaEstaEmListaTrabalhosProntos = true;
           trabalhoPronto = listaTrabalhosProntos.at(i);
-          result = (int*) trabalhoPronto->f((void*) &res);
-          n = (int*) result;
-          trabalhoPronto->res = *n;
-          cout << trabalhoPronto->res;
-          cout << " (sync) " << endl;
-          listaTrabalhosProntos.erase(listaTrabalhosProntos.begin()+i);   
-          pthread_mutex_unlock(&lock);  
-          return 1;  
+          listaTrabalhosProntos.erase(listaTrabalhosProntos.begin()+i);  
+          result = (int*) trabalhoPronto->f((void*) &(trabalhoPronto->numFib));
+          *res = (int*) result;
+          trabalhoPronto->res = **res;
+         
+          
+          cout << "Tarefa "<< tId << " executada com sucesso! Lista de tarefas terminadas: ";
+          printIdLista(listaTrabalhosTerminados);
+          cout << "Lista de tarefas prontas: ";
+          printIdLista(listaTrabalhosProntos);
+          cout << "oii";
+          //pthread_mutex_unlock(&lock2); 
+          return **res;
         }
+       
+        
       }
       if (!tarefaEstaEmListaTrabalhosProntos){//caso 2: verifica se está em listaTrabalhosTerminados e a retira 
+        cout << "Não está em prontos. Verificando se está em trabalhos terminados..." << endl;
         for (int i = 0; i < listaTrabalhosTerminados.size(); i++){
           if(tId == listaTrabalhosTerminados.at(i)->tid){
+            ResultadoTarefa = listaTrabalhosTerminados.at(i)->res;
+            cout << "Tarefa " << tId << " Está em trabalhos terminados, removendo.." << endl;
             tarefaEstaEmListaTrabalhosTerminados = true;
             listaTrabalhosTerminados.erase(listaTrabalhosTerminados.begin()+i);
+            cout <<"Tarefa " << tId << " removida!" << endl;
+            pthread_mutex_unlock(&lock2);  
+            return ResultadoTarefa;
           }
         }
-        return 1;
+        
+        
       } 
-      else if (!tarefaEstaEmListaTrabalhosTerminados && !tarefaEstaEmListaTrabalhosProntos){//caso 3: tarefa esta sendo executada, esperar um pouco;
-          //sleep(10);
-          return 2;
-      }
       
-    cout << "chamada de tarefa incorreta!" << endl;
+       if (!tarefaEstaEmListaTrabalhosTerminados && !tarefaEstaEmListaTrabalhosProntos){//caso 3: tarefa esta sendo executada, esperar um pouco;
+          for (wait = 0; wait < 3; wait++)
+            cout << "Tarefa " << tId << " pode estar sendo executada por meuPV. Esperando..." << endl;  
+          pthread_mutex_unlock(&lock2);             
+      }
+
+    cout << "Chamada de tarefa incorreta!" << endl;
+    pthread_mutex_unlock(&lock2);  
     return 0;
 }
 
@@ -268,5 +334,4 @@ COMO MONTAR OS IDS
 OQ ACONTECE SE O NÚMERO DE PVS FOR MENOR QUE O NÚMERO DE CHAMADAS DE SPAWNS? (VAI SER NA MAIORIA DOS CASOS, CAUSANDO DEADLOCK)
 
 */
-
 
