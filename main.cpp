@@ -158,6 +158,6 @@ int sync(int tId, int **res)
     for (wait = 0; wait < 3; wait++)
       ;
   }
-  
+
   return 0;
 }
