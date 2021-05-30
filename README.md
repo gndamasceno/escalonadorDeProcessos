@@ -3,11 +3,18 @@ Suporte de execução implementando o modelo n x m de threads para uma linguagem
 
 Neste modelo, n tarefas são executadas sobre m processadores virtuais (pvs). As tarefas são as atividades concorrentes criadas pelo programa (com a diretiva spawn). Os pvs são threads responsáveis por executar as tarefas geradas pelo programa. Os pvs compartilham, entre si, duas listas de tarefas: uma de tarefas prontas para executar e outra de tarefas finalizadas. As tarefas devem ser descritas, internamente, por uma estrutura de dados que possua, pelo menos, o ponteiro da função que executará o código da tarefa e dois ponteiros void* para áreas de memória contendo os parâmetros de entrada e o retorno da função.
 
+## Limitações do projeto
+<p>O projeto não executa da maneira correta quando o número de tarefas a ser executadas pelo programa é maior que a quantidade de processadores virtuais disponíveis, acreditamos que esse problema seja causado porque existem erros no uso das variáveis de condição do programa.
+</p>
+## Extras
+<p> O projeto também tem um programa para calcular o fatorial utilizando nossa biblioteca.
+</p>
 ## Executando o projeto
 <p>Para executar esse projeto você precisa de ferramentas básicas utilizadas no desenvolvimento em C/C++, são essenciais nesse projeto: g++ e make. O git também é necessário.
 </p>
 
 ```bash
+
 #### Preparando o ambiente
 
 # Primeiramente, utilize as ferramentas de gerenciamento de pacotes apt para atualizar seu índice de pacotes local.
@@ -35,17 +42,17 @@ $ cd implementacaoPthreads
 # Para compilar o fibonacci 
 $ make all
 
-# Você também pode compilar o fibonacci escrevendo o comando
+# Você também pode compilar o fibonacci escrevendo 
 $ make fibo
 
-# Para executar o fibonacci
-$ ./fibo
+# Para executar o fibonacci passe como parâmetro um número maior que zero para calcular, por exemplo 9
+$ ./fibo.o 9
 
 # Para compilar o fatorial
 $ make fatorial
 
-# Para executar o fatorial
-$ ./fatorial
+# Para executar o fatorial passe como parâmetro um número maior que zero para calcular, por exemplo 9
+$ ./fatorial.o 9
 
 # Para Remover excluir todos os arquivos com extensão .o e os de backup *~ 
 $ make clean

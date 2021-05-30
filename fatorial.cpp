@@ -33,13 +33,20 @@ void *fatorial(void *dta)
     return r;
 }
 
-int main()
+int main(int argc, char *argv[])
 {
+
+    if (atoi(argv[1]) < 0)
+    {
+        cout << "Argumento inválido";
+        exit(EXIT_FAILURE);
+    }
+
     int t1, *r, resultado;
     struct Atrib a1;
     a1.c = 0;
     a1.p = 0;
-    int numeroFatorial = 9;
+    int numeroFatorial = atoi(argv[1]);
 
     t1 = spawn(&a1, fatorial, &numeroFatorial);
 

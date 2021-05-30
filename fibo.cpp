@@ -40,16 +40,19 @@ void *fibo(void *dta)
     return r;
 }
 
-int main()
+int main(int argc, char *argv[])
 {
-    clock_t begin = clock();
-    /* here, do your time-consuming job */
 
+    if (atoi(argv[1]) < 0)
+    {
+        cout << "Argumento inválido";
+        exit(EXIT_FAILURE);
+    }
     int t1, *r, resultado;
     struct Atrib a1;
     a1.c = 0;
     a1.p = 0;
-    int numeroFibonacci = 9;
+    int numeroFibonacci = atoi(argv[1]);
 
     t1 = spawn(&a1, fibo, &numeroFibonacci);
 
@@ -64,10 +67,5 @@ int main()
     cout << "Resultado final: ";
     cout << resultado << endl;
 
-    /* here, do your time-consuming job */
-
-    clock_t end = clock();
-    double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
-    cout << time_spent << endl;
     return 0;
 }
