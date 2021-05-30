@@ -42,7 +42,11 @@ void *fibo(void *dta)
 
 int main(int argc, char *argv[])
 {
-
+    if (argc != 2)
+    {
+        cout << "Argumento inválido";
+        exit(EXIT_FAILURE);
+    }
     if (atoi(argv[1]) < 0)
     {
         cout << "Argumento inválido";
