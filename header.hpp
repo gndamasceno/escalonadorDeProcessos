@@ -54,4 +54,4 @@ struct Trabalho
 static int contador = 0;
 
 //Quantidade de Processadores virtuais
-static int qtdPVs = 100;
+static int qtdPVs = 200;
