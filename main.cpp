@@ -115,8 +115,6 @@ int sync(int tId, int **res)
   bool tarefaEstaEmListaTrabalhosProntos = false;
   bool tarefaEstaEmListaTrabalhosTerminados = false;
   int resp, ResultadoTarefa;
-  int x = 1;
-  int *n;
   void *result;
   Trabalho *aux, *trabalhoPronto;
   for (int i = 0; i < listaTrabalhosProntos.size(); i++)
